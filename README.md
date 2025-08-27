@@ -363,3 +363,124 @@ Open the menuconfig interface for buildroot.
 ## Notices
 When copying the source code package under Windows, the executable file under Linux may become a non-executable file, or the soft link fails and cannot be compiled and used.
 Therefore, please be careful not to copy the source code package under Windows.
+
+---
+
+# FGH100M WiFi HaLow Integration
+
+This repository has been enhanced with **FGH100M WiFi HaLow (802.11ah)** driver support for **Luckfox Pico Mini Plus B**.
+
+## WiFi HaLow Overview
+
+WiFi HaLow (802.11ah) operates in Sub-1GHz frequencies providing:
+- **Long Range**: Up to 1km coverage
+- **Low Power**: IoT optimized
+- **Better Penetration**: Through obstacles
+- **Mesh Capabilities**: Self-healing networks
+
+## Hardware Connection - Luckfox Mini Plus B to FGH100M
+
+### SPI Interface Pins
+| **Function** | **FGH100M Pin** | **Luckfox GPIO** | **Physical Pin** |
+|--------------|-----------------|------------------|------------------|
+| SPI Clock | SPI_CLK | GPIO1_PC1 (49) | Pin 8 |
+| SPI MOSI | SPI_MOSI | GPIO1_PC2 (50) | Pin 7 |
+| SPI MISO | SPI_MISO | GPIO1_PC3 (51) | Pin 10 |
+| SPI CS | SPI_CS | GPIO1_PC0 (48) | Pin 6 |
+
+### Control Pins
+| **Function** | **FGH100M Pin** | **Luckfox GPIO** | **Physical Pin** | **Purpose** |
+|--------------|-----------------|------------------|------------------|-------------|
+| **BUSY** | GPIO0 | **GPIO1_PB1 (9)** | **Pin 9** | Module status |
+| **WIRQ** | WIRQ | **GPIO1_PA6 (14)** | **Pin 14** | Interrupt |
+| **RESET** | nRESET | **GPIO1_PA7 (15)** | **Pin 15** | Reset control |
+| **WAKE** | HOST_WAKE | **GPIO1_PB0 (8)** | **Pin 8** | Wake control |
+| **POWER** | VCC_EN | **GPIO1_PA5 (13)** | **Pin 13** | Power enable |
+
+### Power Supply
+- **VCC**: 3.3V from Luckfox board
+- **GND**: Common ground connection
+
+## Installation
+
+### 1. Apply FGH100M Driver Patch
+```bash
+# Apply the driver patch
+git am patches/0001-net-wireless-Add-FGH100M-WiFi-HaLow-driver-support.patch
+```
+
+### 2. Build with FGH100M Support
+```bash
+# Configure for Mini Plus B with FGH100M
+./build.sh lunch  # Select appropriate config
+./build.sh kernel # Build kernel with driver
+
+# Or build complete image
+./build.sh
+```
+
+### 3. Hardware Setup
+1. Connect FGH100M module according to pin mapping above
+2. Ensure proper 3.3V power supply and ground connections
+3. Use appropriate Sub-1GHz antenna
+
+### 4. Verify Installation
+```bash
+# After boot, check driver loading
+dmesg | grep fgh100m
+
+# Verify interface creation
+ip link show wlan0
+```
+
+## Usage
+
+### Basic WiFi HaLow Operations
+```bash
+# Scan for HaLow networks
+iw dev wlan0 scan
+
+# Connect using wpa_supplicant
+wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf
+
+# Get IP address
+dhclient wlan0
+```
+
+### Mesh Networking
+```bash
+# Create mesh interface
+iw dev wlan0 interface add mesh0 type mesh
+iw dev mesh0 mesh join MyHaLowMesh freq 915
+
+# Configure mesh
+ip addr add 192.168.100.1/24 dev mesh0
+ip link set mesh0 up
+```
+
+## Files Added/Modified
+
+- `sysdrv/source/kernel/drivers/net/wireless/fgh100m/` - Complete FGH100M driver
+- `sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini-plus-b.dts` - Device tree
+- `patches/0001-net-wireless-Add-FGH100M-WiFi-HaLow-driver-support.patch` - Driver patch
+- `patches/README.md` - Detailed patch information
+
+## Troubleshooting
+
+### Driver Issues
+```bash
+# Check kernel logs
+dmesg | grep -E "(fgh100m|morse)"
+
+# Verify SPI interface
+ls /dev/spidev*
+
+# Check GPIO status
+cat /sys/kernel/debug/gpio
+```
+
+### Connection Problems
+- Verify hardware connections match pin mapping
+- Check antenna connections
+- Ensure regulatory domain is correct
+- Verify power supply stability (3.3V)
