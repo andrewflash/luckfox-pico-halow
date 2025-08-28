@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
  * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2024 FGH100M WiFi HaLow Integration
  */
 
 /dts-v1/;
@@ -12,6 +13,17 @@
 / {
 	model = "Luckfox Pico Plus";
 	compatible = "rockchip,rv1103g-38x38-ipc-v10", "rockchip,rv1103";
+
+	/* GPIO regulator for FGH100M power control */
+	fgh100m_power: fgh100m-power-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "fgh100m-power";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		startup-delay-us = <10000>;
+	};
 };
 
 /**********SFC**********/
@@ -60,12 +72,41 @@
 /**********SPI**********/
 /* SPI0_M0 */
 &spi0 {
-	status = "disabled";
-	spidev@0 {
-		spi-max-frequency = <50000000>;
-	};
-	fbtft@0 {
-		spi-max-frequency = <50000000>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0m0_cs0 &spi0m0_pins>;
+
+	fgh100m: fgh100m@0 {
+		compatible = "morse,fgh100m";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		spi-cpha;
+		spi-cpol;
+		
+		/* Power supply */
+		vdd-supply = <&fgh100m_power>;
+		
+		/* GPIO pins for FGH100M control (following driver requirements from of.c) */
+		reset-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_LOW>;         /* GPIO1_C5 - nRESET pin */
+		power-gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>,        /* GPIO1_D0 - HOST_WAKE pin (index 0) */
+		             <&gpio1 RK_PD1 GPIO_ACTIVE_HIGH>;          /* GPIO1_D1 - BUSY pin (GPIO0) (index 1) */
+		spi-irq-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;      /* GPIO1_C4 - WIRQ pin */
+		
+		/* Interrupt configuration */
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PC4 IRQ_TYPE_EDGE_RISING>;             /* WIRQ interrupt */
+		interrupt-names = "fgh100m-irq";
+		
+		/* Module configuration */
+		morse,country-code = "AU";
+		morse,power-save-mode = <0>;
+		morse,use-spi = <1>;
+		morse,max-ampdu-len = <65535>;
+		
+		/* Antenna configuration */
+		morse,antenna-config = <1>; /* Single antenna */
+		
+		status = "okay";
 	};
 };
 
@@ -99,3 +140,19 @@
 	status = "disabled";
 };
 
+/* Additional pinctrl for FGH100M GPIOs */
+&pinctrl {
+	fgh100m {
+		fgh100m_pins: fgh100m-pins {
+			rockchip,pins =
+				/* Reset pin: GPIO1_C5 (nRESET) */
+				<1 RK_PC5 0 &pcfg_pull_up>,
+				/* Wake pin: GPIO1_D0 (HOST_WAKE) */
+				<1 RK_PD0 0 &pcfg_pull_down>,
+				/* Busy pin: GPIO1_D1 (GPIO0/BUSY) */
+				<1 RK_PD1 0 &pcfg_pull_down>,
+				/* IRQ pin: GPIO1_C4 (WIRQ) */
+				<1 RK_PC4 0 &pcfg_pull_down>;
+		};
+	};
+};

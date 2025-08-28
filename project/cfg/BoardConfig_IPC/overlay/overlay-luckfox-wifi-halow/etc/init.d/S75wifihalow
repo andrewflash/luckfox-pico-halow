@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# WiFi HaLow (802.11ah) initialization script
+# Loads FGH100M driver and sets up WiFi interface
+#
+
+DAEMON="wifihalow"
+PIDFILE="/var/run/$DAEMON.pid"
+
+# Module loading with dependencies
+load_modules() {
+    echo "Loading WiFi HaLow modules..."
+    
+    # Load in dependency order using insmod with safeguards
+    [ -f "/oem/usr/ko/libarc4.ko" ] && insmod /oem/usr/ko/libarc4.ko 2>/dev/null || true
+    [ -f "/oem/usr/ko/cfg80211.ko" ] && insmod /oem/usr/ko/cfg80211.ko 2>/dev/null || true
+    [ -f "/oem/usr/ko/mac80211.ko" ] && insmod /oem/usr/ko/mac80211.ko 2>/dev/null || true
+    
+    # Load 802.11ah support if available
+    if [ -f "/oem/usr/ko/dot11ah.ko" ]; then
+        insmod /oem/usr/ko/dot11ah.ko 2>/dev/null || true
+    fi
+    
+    # Load Morse FGH100M driver
+    if [ -f "/oem/usr/ko/morse.ko" ]; then
+        insmod /oem/usr/ko/morse.ko 2>/dev/null || true
+        echo "Morse FGH100M driver loaded"
+    else
+        echo "Warning: morse.ko not found"
+        return 1
+    fi
+    
+    # Wait for interface to come up
+    sleep 2
+    
+    # Check if WiFi interface exists
+    if ip link show wlan0 >/dev/null 2>&1; then
+        echo "WiFi HaLow interface wlan0 ready"
+        ip link set wlan0 up
+    else
+        echo "Warning: wlan0 interface not found"
+    fi
+}
+
+unload_modules() {
+    echo "Unloading WiFi HaLow modules..."
+    rmmod morse 2>/dev/null || true
+    rmmod dot11ah 2>/dev/null || true
+    rmmod mac80211 2>/dev/null || true
+    rmmod cfg80211 2>/dev/null || true
+    rmmod libarc4 2>/dev/null || true
+}
+
+start() {
+    echo -n "Starting $DAEMON: "
+    load_modules
+    echo "OK"
+}
+
+stop() {
+    echo -n "Shutting down $DAEMON: "
+    unload_modules
+    echo "OK"
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload)
+        restart
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?

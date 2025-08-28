@@ -20,8 +20,6 @@
 		regulator-name = "fgh100m-power";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio1 RK_PA5 GPIO_ACTIVE_HIGH>; /* GPIO1_PA5 - Power Enable pin */
-		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
 		startup-delay-us = <10000>;
@@ -89,14 +87,14 @@
 		vdd-supply = <&fgh100m_power>;
 		
 		/* GPIO pins for FGH100M control (following driver requirements from of.c) */
-		reset-gpios = <&gpio1 RK_PA7 GPIO_ACTIVE_LOW>;         /* GPIO1_PA7 - nRESET pin */
-		power-gpios = <&gpio1 RK_PB0 GPIO_ACTIVE_HIGH>,        /* GPIO1_PB0 - HOST_WAKE pin (index 0) */
-		             <&gpio1 RK_PB1 GPIO_ACTIVE_HIGH>;          /* GPIO1_PB1 - BUSY pin (GPIO0) (index 1) */
-		spi-irq-gpios = <&gpio1 RK_PA6 GPIO_ACTIVE_HIGH>;      /* GPIO1_PA6 - WIRQ pin */
+		reset-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_LOW>;         /* GPIO1_C5 - nRESET pin */
+		power-gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>,        /* GPIO1_D0 - HOST_WAKE pin (index 0) */
+		             <&gpio1 RK_PD1 GPIO_ACTIVE_HIGH>;          /* GPIO1_D1 - BUSY pin (GPIO0) (index 1) */
+		spi-irq-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;      /* GPIO1_C4 - WIRQ pin */
 		
 		/* Interrupt configuration */
 		interrupt-parent = <&gpio1>;
-		interrupts = <RK_PA6 IRQ_TYPE_EDGE_RISING>;             /* WIRQ interrupt */
+		interrupts = <RK_PC4 IRQ_TYPE_EDGE_RISING>;             /* WIRQ interrupt */
 		interrupt-names = "fgh100m-irq";
 		
 		/* Module configuration */
@@ -141,16 +139,14 @@
 	fgh100m {
 		fgh100m_pins: fgh100m-pins {
 			rockchip,pins =
-				/* Reset pin: GPIO1_PA7 (nRESET) */
-				<1 RK_PA7 0 &pcfg_pull_up>,
-				/* Wake pin: GPIO1_PB0 (HOST_WAKE) */
-				<1 RK_PB0 0 &pcfg_pull_down>,
-				/* Busy pin: GPIO1_PB1 (GPIO0/BUSY) */
-				<1 RK_PB1 0 &pcfg_pull_down>,
-				/* IRQ pin: GPIO1_PA6 (WIRQ) */
-				<1 RK_PA6 0 &pcfg_pull_down>,
-				/* Power Enable pin: GPIO1_PA5 */
-				<1 RK_PA5 0 &pcfg_pull_down>;
+				/* Reset pin: GPIO1_C5 (nRESET) */
+				<1 RK_PC5 0 &pcfg_pull_up>,
+				/* Wake pin: GPIO1_D0 (HOST_WAKE) */
+				<1 RK_PD0 0 &pcfg_pull_down>,
+				/* Busy pin: GPIO1_D1 (GPIO0/BUSY) */
+				<1 RK_PD1 0 &pcfg_pull_down>,
+				/* IRQ pin: GPIO1_C4 (WIRQ) */
+				<1 RK_PC4 0 &pcfg_pull_down>;
 		};
 	};
 };
